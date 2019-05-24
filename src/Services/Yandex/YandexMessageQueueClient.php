@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace Omadonex\Support\Services\Yandex;
 
 use Aws\Sqs\SqsClient;
 use Omadonex\Support\Interfaces\IMessageQueueClient;

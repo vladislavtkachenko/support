@@ -1,0 +1,22 @@
+{
+    "name": "omadonex/support",
+    "description": "Different utilities for building PHP apps",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Yuriy Arkhipov",
+            "email": "omadonex@yandex.ru"
+        },
+        {
+            "name": "Albina Bystritskaya",
+            "email": "doofelshmerz@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Omadonex\\Support\\": "src/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

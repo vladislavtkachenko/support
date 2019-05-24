@@ -1,154 +1,95 @@
 <?php
 
-namespace Omadonex\Support\Services\Yandex;
+namespace App\Services;
 
-use Omadonex\Support\Interfaces\IMessageQueueClient;
-use Omadonex\Support\Traits\CurlRequestTrait;
+use Aws\Sqs\SqsClient;
 
-class YandexMessageQueueClient implements IMessageQueueClient
+class YandexMessageQueueClient
 {
-    use CurlRequestTrait;
-
-    protected $secret;
-    protected $key;
-    protected $config;
+    /**
+     * @var SqsClient
+     */
+    private $client;
 
     /**
      * YandexMessageQueueClient constructor.
-     * @param $secret
      * @param $key
+     * @param $secret
      * @param array $config
      */
-    public function __construct($secret, $key, $config = [])
+    public function __construct($key, $secret, $config = [])
     {
-        $this->secret = $secret;
-        $this->key = $key;
-        $this->config = array_merge($this->getDefaultConfig(), $config);
+        $this->client = new SqsClient(array_merge($this->getConfig($key, $secret), $config));
     }
 
     /**
      * Возвращает конфиг по умолчанию
      * @return array
      */
-    protected function getDefaultConfig()
+    protected function getConfig($key, $secret)
     {
-        $host = 'message-queue.api.cloud.yandex.net';
-
         return [
             'region' => 'ru-central1',
-            'service' => 'sqs',
-            'host' => $host,
-            'endpoint' => "https://{$host}",
+            'credentials' => [
+                'key' => $key,
+                'secret' => $secret,
+            ],
             'version' => '2012-11-05',
         ];
     }
 
     /**
-     * Формирует базовую строку запроса для действия
      * @param $queue
-     * @param $action
-     * @return string
+     * @param $message
+     * @param int $delaySeconds
+     * @param null $attributes
+     * @return mixed
      */
-    protected function getDefaultBody($queue, $action)
+    public function sendMessage($queue, $message, $delaySeconds = 20, $attributes = null)
     {
-        return "Action={$action}&Version={$this->config['version']}&QueueUrl=" . urldecode($queue);
-    }
+        $params = [
+            'QueueUrl' => $queue,
+            'MessageBody' => $message ,
+        ];
 
-    /**
-     * Получает сообщение из очереди
-     * @param $queue
-     * @param bool $autoDelete
-     * @return mixed|null
-     * @throws \Omadonex\Support\Classes\Exceptions\OmxCurlRequestException
-     */
-    public function getMessage($queue, $autoDelete = true)
-    {
-        $body = $this->getDefaultBody($queue, 'ReceiveMessage') . '&WaitTimeSeconds=20';
-
-        $message = null;
-        $curlResponse = $this->sendCurlRequest($this->config['endpoint'], $body, $this->getHeaders($body));
-        $response = json_decode(json_encode(simplexml_load_string($curlResponse)));
-
-        if (!empty($response->ReceiveMessageResult && !empty($response->ReceiveMessageResult->Message))) {
-            $message = json_decode($response->ReceiveMessageResult->Message->Body);
-            if ($autoDelete) {
-                $this->deleteMessage($queue, $response->ReceiveMessageResult->Message->ReceiptHandle);
-            }
+        if ($delaySeconds) {
+            $params['DelaySeconds'] = $delaySeconds;
         }
 
-        return $message;
+        if ($attributes) {
+            $params['MessageAttributes'] = $attributes;
+        }
+
+        return $this->client->sendMessage($params);
     }
 
     /**
-     * Удаляет сообщение из очереди
+     * @param $queue
+     * @param int $waitTimeSeconds
+     * @return mixed
+     */
+    public function receiveMessage($queue, $waitTimeSeconds = 20)
+    {
+        $params = [
+            'QueueUrl' => $queue,
+            'WaitTimeSeconds' => $waitTimeSeconds,
+        ];
+
+        return $this->client->receiveMessage($params);
+    }
+
+    /**
      * @param $queue
      * @param $receiptHandle
-     * @return bool|mixed|string
-     * @throws \Omadonex\Support\Classes\Exceptions\OmxCurlRequestException
+     * @return mixed
      */
     public function deleteMessage($queue, $receiptHandle)
     {
-        $body = $this->getDefaultBody($queue, 'DeleteMessage') . "&ReceiptHandle={$receiptHandle}";
-
-        return $this->sendCurlRequest($this->config['endpoint'], $body, $this->getHeaders($body));
-    }
-
-    /**
-     * Генерация подписи
-     * @param $body
-     * @param $ldt
-     * @return string
-     */
-    private function generateSign($body, $ldt)
-    {
-        $sdt = substr($ldt, 0, 8);
-        $method = 'POST';
-
-        $canonicalUri = '/';
-        $canonicalQuerystring = '';
-        $canonicalHeaders = "host:{$this->config['host']}\nx-amz-date:{$ldt}\n";
-        $signedHeaders = 'host;x-amz-date';
-
-        $payload = hash('sha256', $body);
-        $canonicalRequest = "{$method}\n{$canonicalUri}\n{$canonicalQuerystring}\n{$canonicalHeaders}\n{$signedHeaders}\n{$payload}";
-        $credentialScope = "$sdt/{$this->config['region']}/{$this->config['service']}/aws4_request";
-        $hash = hash('sha256', $canonicalRequest);
-        $stringToSign = "AWS4-HMAC-SHA256\n{$ldt}\n{$credentialScope}\n{$hash}";
-        $signingKey = $this->getSignatureKey($sdt);
-        $signature = hash_hmac('sha256', $stringToSign, $signingKey);
-
-        return "AWS4-HMAC-SHA256 Credential={$this->key}/{$credentialScope}, SignedHeaders={$signedHeaders}, Signature={$signature}";
-    }
-
-    /**
-     * Генерация ключа подписи
-     * @param $dateStamp
-     * @return string
-     */
-    private function getSignatureKey($dateStamp)
-    {
-        $kDate = hash_hmac('sha256', $dateStamp, 'AWS4'.$this->secret, true);
-        $kRegion = hash_hmac('sha256', $this->config['region'], $kDate, true);
-        $kService = hash_hmac('sha256', $this->config['service'], $kRegion, true);
-        $kSigning = hash_hmac('sha256', 'aws4_request', $kService, true);
-
-        return $kSigning;
-    }
-
-    /**
-     * Формирует заголовки запроса
-     * @param $body
-     * @return array
-     */
-    private function getHeaders($body)
-    {
-        $ldt = gmdate('Ymd\THis\Z');
-
-        return [
-            'Content-Type: application/x-www-form-urlencoded',
-            "X-Amz-Date:{$ldt}",
-            'Authorization: ' . $this->generateSign($body, $ldt),
-            "Host:{$this->config['host']}",
+        $params = [
+            'QueueUrl' => $queue,
+            'ReceiptHandle' => $receiptHandle,
         ];
+
+        return $this->client->deleteMessage($params);
     }
 }

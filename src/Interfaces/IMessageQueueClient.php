@@ -5,15 +5,22 @@ namespace Omadonex\Support\Interfaces;
 interface IMessageQueueClient
 {
     /**
-     * Receives message from queue
      * @param $queue
-     * @param bool $autoDelete
+     * @param $message
+     * @param int $delaySeconds
+     * @param null $attributes
      * @return mixed
      */
-    public function getMessage($queue, $autoDelete = true);
+    public function sendMessage($queue, $message, $delaySeconds = 20, $attributes = null);
 
     /**
-     * Deletes message from queue
+     * @param $queue
+     * @param int $waitTimeSeconds
+     * @return mixed
+     */
+    public function receiveMessage($queue, $waitTimeSeconds = 20);
+
+    /**
      * @param $queue
      * @param $receiptHandle
      * @return mixed

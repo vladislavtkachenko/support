@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use Aws\Sqs\SqsClient;
+use Omadonex\Support\Interfaces\IMessageQueueClient;
 
-class YandexMessageQueueClient
+class YandexMessageQueueClient implements IMessageQueueClient
 {
     /**
      * @var SqsClient

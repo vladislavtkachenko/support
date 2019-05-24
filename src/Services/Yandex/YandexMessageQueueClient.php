@@ -66,10 +66,12 @@ class YandexMessageQueueClient implements IMessageQueueClient
 
     /**
      * @param $queue
+     * @param bool $autoDelete
+     * @param bool $returnBodyObj
      * @param int $waitTimeSeconds
-     * @return mixed
+     * @return mixed|null
      */
-    public function receiveMessage($queue, $waitTimeSeconds = 20)
+    public function receiveMessage($queue, $autoDelete = true, $returnBodyObj = true, $waitTimeSeconds = 20)
     {
         $params = [
             'QueueUrl' => $queue,
@@ -80,7 +82,16 @@ class YandexMessageQueueClient implements IMessageQueueClient
         if ($result->hasKey('Messages')) {
             $messages = $result->get('Messages');
             if (is_array($messages) && !empty($messages)) {
-                return $messages[0];
+                $messageData = $messages[0];
+                if ($autoDelete) {
+                    $this->deleteMessage($queue, $messageData['ReceiptHandle']);
+                }
+
+                if ($returnBodyObj) {
+                    return json_decode($messageData['Body']);
+                }
+
+                return $messageData;
             }
         }
 

@@ -15,10 +15,12 @@ interface IMessageQueueClient
 
     /**
      * @param $queue
+     * @param bool $autoDelete
+     * @param bool $returnBodyObj
      * @param int $waitTimeSeconds
      * @return mixed
      */
-    public function receiveMessage($queue, $waitTimeSeconds = 20);
+    public function receiveMessage($queue, $autoDelete = true, $returnBodyObj = true, $waitTimeSeconds = 20);
 
     /**
      * @param $queue

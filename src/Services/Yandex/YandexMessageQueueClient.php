@@ -76,7 +76,15 @@ class YandexMessageQueueClient implements IMessageQueueClient
             'WaitTimeSeconds' => $waitTimeSeconds,
         ];
 
-        return $this->client->receiveMessage($params);
+        $result = $this->client->receiveMessage($params);
+        if ($result->hasKey('Messages')) {
+            $messages = $result->get('Messages');
+            if (is_array($messages) && !empty($messages)) {
+                return $messages[0];
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -93,8 +93,8 @@ class CentrifugoClient implements ICentrifugoClient
     {
         return array_merge([
             'url' => $this->getUrlSockJs($sockJs),
-            'user' => $userId,
-            'timestamp' => time(),
+            'user' => (string) $userId,
+            'timestamp' => (string) time(),
             'token' => $this->generateToken(['sub' => $userId]),
         ], $options);
     }

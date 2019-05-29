@@ -83,18 +83,6 @@ class CentrifugoClient implements ICentrifugoClient
     }
 
     /**
-     * Формирует заголовки запроса
-     * @return array
-     */
-    private function getHeaders()
-    {
-        return [
-            'Content-Type: application/json',
-            "Authorization: apikey {$this->apiKey}",
-        ];
-    }
-
-    /**
      * Параметры соединения для использования на фронте
      * @param $userId
      * @param bool $sockJs
@@ -109,6 +97,18 @@ class CentrifugoClient implements ICentrifugoClient
             'timestamp' => time(),
             'token' => $this->generateToken(['sub' => $userId]),
         ], $options);
+    }
+
+    /**
+     * Формирует заголовки запроса
+     * @return array
+     */
+    private function getHeaders()
+    {
+        return [
+            'Content-Type: application/json',
+            "Authorization: apikey {$this->apiKey}",
+        ];
     }
 
     /**

@@ -19,4 +19,13 @@ interface ICentrifugoClient
      * @return mixed
      */
     public function broadcast($channels, $data);
+
+    /**
+     * Параметры соединения для использования на фронте
+     * @param $userId
+     * @param bool $sockJs
+     * @param array $options
+     * @return mixed
+     */
+    public function getConnectionParams($userId, $sockJs = false, $options = []);
 }

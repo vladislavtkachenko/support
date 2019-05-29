@@ -9,7 +9,8 @@ class CentrifugoClient implements ICentrifugoClient
 {
     use CurlRequestTrait;
 
-    protected $url;
+    protected $endpoint;
+    protected $secret;
     protected $apiKey;
 
     /**
@@ -17,10 +18,34 @@ class CentrifugoClient implements ICentrifugoClient
      * @param $url
      * @param $apiKey
      */
-    public function __construct($url, $apiKey)
+    public function __construct($endpoint, $secret, $apiKey)
     {
-        $this->url = $url;
+        $this->endpoint = $endpoint;
+        $this->secret = $secret;
         $this->apiKey = $apiKey;
+    }
+
+    /**
+     * Url для коннекта через api
+     * @return string
+     */
+    protected function getUrlApi()
+    {
+        return "{$this->endpoint}/api";
+    }
+
+    /**
+     * Url для коннекта через socjhs
+     * @param bool $sockJs
+     * @return string
+     */
+    protected function getUrlSockJs($sockJs = false)
+    {
+        if ($sockJs) {
+            return "{$this->endpoint}/connection/sockjs";
+        }
+
+        return $this->endpoint;
     }
 
     /**
@@ -37,7 +62,7 @@ class CentrifugoClient implements ICentrifugoClient
             'data' => $data,
         ]]);
 
-        return $this->sendCurlRequest($this->url, $body, $this->getHeaders());
+        return $this->sendCurlRequest($this->getUrlApi(), $body, $this->getHeaders());
     }
 
     /**
@@ -54,7 +79,7 @@ class CentrifugoClient implements ICentrifugoClient
             'data' => $data,
         ]]);
 
-        return $this->sendCurlRequest($this->url, $body, $this->getHeaders());
+        return $this->sendCurlRequest($this->getUrlApi(), $body, $this->getHeaders());
     }
 
     /**
@@ -67,5 +92,47 @@ class CentrifugoClient implements ICentrifugoClient
             'Content-Type: application/json',
             "Authorization: apikey {$this->apiKey}",
         ];
+    }
+
+    /**
+     * Параметры соединения для использования на фронте
+     * @param $userId
+     * @param bool $sockJs
+     * @param array $options
+     * @return array
+     */
+    public function getConnectionParams($userId, $sockJs = false, $options = [])
+    {
+        return array_merge([
+            'url' => $this->getUrlSockJs($sockJs),
+            'user' => $userId,
+            'timestamp' => time(),
+            'token' => $this->generateToken(['sub' => $userId]),
+        ], $options);
+    }
+
+    /**
+     * Генерирует токен для использования на фронте
+     * @param array $payload
+     * @return string
+     */
+    private function generateToken($payload = [])
+    {
+        $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
+        $base64UrlHeader = $this->convertToBase64Url($header);
+        $base64UrlPayload = $this->convertToBase64Url(json_encode($payload));
+        $signature = hash_hmac('sha256', "{$base64UrlHeader}.{$base64UrlPayload}", $this->secret, true);
+        $base64UrlSignature = $this->convertToBase64Url($signature);
+
+        return "{$base64UrlHeader}.{$base64UrlPayload}.{$base64UrlSignature}";
+    }
+
+    /**
+     * @param $string
+     * @return mixed
+     */
+    private function convertToBase64Url($string)
+    {
+        return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($string));
     }
 }

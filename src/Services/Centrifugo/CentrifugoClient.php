@@ -100,18 +100,6 @@ class CentrifugoClient implements ICentrifugoClient
     }
 
     /**
-     * Формирует заголовки запроса
-     * @return array
-     */
-    private function getHeaders()
-    {
-        return [
-            'Content-Type: application/json',
-            "Authorization: apikey {$this->apiKey}",
-        ];
-    }
-
-    /**
      * Генерирует токен для использования в js
      * @param array $payload
      * @return string
@@ -125,6 +113,18 @@ class CentrifugoClient implements ICentrifugoClient
         $base64UrlSignature = $this->convertToBase64Url($signature);
 
         return "{$base64UrlHeader}.{$base64UrlPayload}.{$base64UrlSignature}";
+    }
+
+    /**
+     * Формирует заголовки запроса
+     * @return array
+     */
+    private function getHeaders()
+    {
+        return [
+            'Content-Type: application/json',
+            "Authorization: apikey {$this->apiKey}",
+        ];
     }
 
     /**

@@ -24,7 +24,9 @@ class YandexMessageQueueClient implements IMessageQueueClient
     }
 
     /**
-     * Возвращает конфиг по умолчанию
+     * Конфиг по умолчанию
+     * @param $cloudSA_key
+     * @param $cloudSA_secret
      * @return array
      */
     protected function getConfig($cloudSA_key, $cloudSA_secret)
@@ -40,22 +42,21 @@ class YandexMessageQueueClient implements IMessageQueueClient
     }
 
     /**
+     * Помещает сообщение в очередь
      * @param $queue
      * @param $message
      * @param int $delaySeconds
      * @param null $attributes
      * @return mixed
      */
-    public function sendMessage($queue, $message, $delaySeconds = 20, $attributes = null)
+    public function sendMessage($queue, $message, $delaySeconds = 0, $attributes = null)
     {
         $params = [
             'QueueUrl' => $queue,
             'MessageBody' => $message ,
         ];
 
-        if ($delaySeconds) {
-            $params['DelaySeconds'] = $delaySeconds;
-        }
+        $params['DelaySeconds'] = $delaySeconds;
 
         if ($attributes) {
             $params['MessageAttributes'] = $attributes;
@@ -65,13 +66,14 @@ class YandexMessageQueueClient implements IMessageQueueClient
     }
 
     /**
+     * Получает одно или несколько сообщений
      * @param $queue
+     * @param bool $rawData
      * @param bool $autoDelete
-     * @param bool $returnBodyObj
      * @param int $waitTimeSeconds
-     * @return mixed|null
+     * @return array|mixed|null
      */
-    public function receiveMessage($queue, $autoDelete = true, $returnBodyObj = true, $waitTimeSeconds = 20)
+    public function receiveMessage($queue, $rawData = false, $autoDelete = false, $waitTimeSeconds = 20)
     {
         $params = [
             'QueueUrl' => $queue,
@@ -82,16 +84,23 @@ class YandexMessageQueueClient implements IMessageQueueClient
         if ($result->hasKey('Messages')) {
             $messages = $result->get('Messages');
             if (is_array($messages) && !empty($messages)) {
-                $messageData = $messages[0];
-                if ($autoDelete) {
-                    $this->deleteMessage($queue, $messageData['ReceiptHandle']);
+                $data = [];
+                foreach ($messages as $message) {
+                    $messageData = [
+                        'handle' => $message['ReceiptHandle'],
+                        'body' => json_decode($message['Body']),
+                    ];
+                    if ($rawData) {
+                        $messageData = array_merge($messageData, ['raw' => $message]);
+                    }
+                    $data[] = $messageData;
+
+                    if ($autoDelete) {
+                        $this->deleteMessage($queue, $messageData['ReceiptHandle']);
+                    }
                 }
 
-                if ($returnBodyObj) {
-                    return json_decode($messageData['Body']);
-                }
-
-                return $messageData;
+                return $data;
             }
         }
 
@@ -99,6 +108,7 @@ class YandexMessageQueueClient implements IMessageQueueClient
     }
 
     /**
+     * Удаляет сообщение
      * @param $queue
      * @param $receiptHandle
      * @return mixed

@@ -91,11 +91,14 @@ class CentrifugoClient implements ICentrifugoClient
      */
     public function getConnectionParams($userId, $sockJs = false, $options = [])
     {
+        $userIdStr = (string) $userId;
+        $timeStr = (string) time();
+
         return array_merge([
             'url' => $this->getUrlSockJs($sockJs),
-            'user' => (string) $userId,
-            'timestamp' => (string) time(),
-            'token' => $this->generateToken(['sub' => $userId]),
+            'user' => $userIdStr,
+            'timestamp' => $timeStr,
+            'token' => $this->generateToken(['sub' => $userIdStr]),
         ], $options);
     }
 

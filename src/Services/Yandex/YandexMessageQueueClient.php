@@ -14,26 +14,26 @@ class YandexMessageQueueClient implements IMessageQueueClient
 
     /**
      * YandexMessageQueueClient constructor.
-     * @param $key
-     * @param $secret
+     * @param $cloudSA_key (ключ сервисного аккаунта в облаке)
+     * @param $cloudSA_secret (секрет сервисного аккаунта в облаке)
      * @param array $config
      */
-    public function __construct($key, $secret, $config = [])
+    public function __construct($cloudSA_key, $cloudSA_secret, $config = [])
     {
-        $this->client = new SqsClient(array_merge($this->getConfig($key, $secret), $config));
+        $this->client = new SqsClient(array_merge($this->getConfig($cloudSA_key, $cloudSA_secret), $config));
     }
 
     /**
      * Возвращает конфиг по умолчанию
      * @return array
      */
-    protected function getConfig($key, $secret)
+    protected function getConfig($cloudSA_key, $cloudSA_secret)
     {
         return [
             'region' => 'ru-central1',
             'credentials' => [
-                'key' => $key,
-                'secret' => $secret,
+                'key' => $cloudSA_key,
+                'secret' => $cloudSA_secret,
             ],
             'version' => '2012-11-05',
         ];

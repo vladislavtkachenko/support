@@ -112,11 +112,11 @@ class CentrifugoClient implements ICentrifugoClient
     }
 
     /**
-     * Генерирует токен для использования на фронте
+     * Генерирует токен для использования в js
      * @param array $payload
      * @return string
      */
-    private function generateToken($payload = [])
+    public function generateToken($payload = [])
     {
         $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
         $base64UrlHeader = $this->convertToBase64Url($header);

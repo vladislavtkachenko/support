@@ -28,4 +28,11 @@ interface ICentrifugoClient
      * @return mixed
      */
     public function getConnectionParams($userId, $sockJs = false, $options = []);
+
+    /**
+     * Генерирует токен для использования в js
+     * @param array $payload
+     * @return mixed
+     */
+    public function generateToken($payload = []);
 }
